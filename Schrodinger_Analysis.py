@@ -1,52 +1,50 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import odeint
 
-def schrodinger(n, a):
+def find_energy(n):
+    return (n ** 2) * (np.pi ** 2) / 2
 
-    psi = []
-    E_n = []
-    pos = []
-    prob = []
+def V(x):
+    return np.where((0 <= x) & (x <= 1), 0, np.inf)
 
-    for x in np.linspace(-1, a + 1, 1000):
+def schrodinger(r, x, V, E):
 
-        if x <= 0 or x >= a:
-            #Bad, not allowed (inside walls), infinite potential
-            pos.append(x)
-            psi.append(0)
-            E_n.append(0)
-            prob.append(0)
+    hbar = 1
+    m = 1
+    psi, phi = r
+    dpsi = phi
+    dphi = (2 * m / hbar**2) * (V(x) - E) * psi
+    return [dpsi, dphi]
 
-        else:
-            #Good, between walls, potential = 0
-            print("Good, allowed")
-            m = 9.10938356e-31 #kg
-            h = 6.62607004e-34 #Joule-seconds
-            hbar = h / (2 * np.pi)
-            k_n = (n * np.pi) / a
+def solver(n):
+    x_vals = np.linspace(0, 1, 100)
+    initial = [0, 1]
 
-            A = np.sqrt(2 / a)
+    E = find_energy(n)
 
-            pos.append(x)
-            psi.append(A * np.sin(k_n * x))
-            E_n.append(((hbar ** 2) * (k_n ** 2)) / (2 * m))
-            prob.append(psi[-1] ** 2)
+    solution = odeint(schrodinger, initial, x_vals, args=(V, E))
+    psi_values = solution[:, 0]
+    norm = np.trapezoid(psi_values ** 2, x_vals)
+    psi_values /= np.sqrt(norm)
 
-    return pos, psi, E_n, prob
+    return x_vals, psi_values
 
-a = 1
-pos, psi, E_n, prob = schrodinger(1, a)
-pos2, psi2, E_n2, prob2 = schrodinger(2, a)
+def plot_schrodinger(n):
+    x_vals, psi_values = solver(n)
 
-plt.figure()
-plt.plot(pos, prob, c = "b", label = "n = 1")
-plt.plot(pos2, prob2, c = "r", label = "n = 2")
-plt.xlabel("Position")
-plt.ylabel("Probability")
-plt.legend(loc = "best")
-plt.vlines(0, 0, 5, linestyles = "dashed")
-plt.vlines(a, 0, 5, linestyles = "dashed")
-plt.xlim(-1, a + 1)
-plt.ylim(-1, 5)
-plt.show()
+    fig, ax = plt.subplots()
+    plt.figure()
+    plt.subplot(211)
+    plt.plot(x_vals, psi_values)
+    plt.xlabel("Position")
+    plt.ylabel("Wavefunction")
+
+    plt.subplot(212)
+    plt.plot(x_vals, psi_values ** 2)
+    plt.xlabel("Position")
+    plt.ylabel("Probability")
+    plt.tight_layout()
+    plt.show()
+
