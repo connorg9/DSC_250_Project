@@ -9,6 +9,12 @@ def find_energy(n):
 def V(x):
     return np.where((0 <= x) & (x <= 1), 0, 1e10)
 
+def color_map(x):
+    if x <= 0 or x >= 1:
+        return "red"
+    else:
+        return "green"
+
 def schrodinger(r, x, V, E):
 
     hbar = 1
@@ -30,6 +36,10 @@ def solver(n):
     x_vals = np.linspace(min, max, resolution)
     valid_x = [x for x in x_vals if 0 <= x <= 1]
 
+    colors = []
+    for x in x_vals:
+        colors.append(color_map(x))
+
     initial = [0, 1]
 
     E = find_energy(n)
@@ -40,12 +50,13 @@ def solver(n):
     norm = np.trapezoid(psi_values ** 2, valid_x)
     psi_values /= np.sqrt(norm)
 
-    zeros = len(x_vals) - len(valid_x)
+    zeros = int((len(x_vals) - len(valid_x)) / 2)
 
+    beginning = np.zeros(zeros)
+    psi_values = np.concatenate((beginning, psi_values))
     psi_values = np.append(psi_values, [0] * zeros)
 
-    print(psi_values)
-    return x_vals, valid_x, psi_values
+    return x_vals, valid_x, psi_values, colors
 
 
 
@@ -55,9 +66,10 @@ def plot_schrodinger(n):
 
     for i, n in enumerate(n):
 
-        x_vals, valid_x, psi_values = solver(n)
+        x_vals, valid_x, psi_values, colors = solver(n)
 
-        ax[i, 0].plot(valid_x, psi_values)
+
+        ax[i, 0].plot(x_vals, psi_values, color=colors)
         ax[i, 0].set_title("Wavefunction of n = {0}".format(n))
         ax[i, 0].axvline(0, color='k', linestyle='--')
         ax[i, 0].axvline(1, color='k', linestyle='--')
@@ -65,7 +77,7 @@ def plot_schrodinger(n):
         ax[i, 0].set_ylabel("Psi")
         ax[i, 0].grid(True)
 
-        ax[i, 1].plot(valid_x, psi_values ** 2)
+        ax[i, 1].plot(x_vals, psi_values ** 2, color=color_map(x_vals))
         ax[i, 1].set_title("Probability of n = {0}".format(n))
         ax[i, 1].axvline(0, color='k', linestyle='--')
         ax[i, 1].axvline(1, color='k', linestyle='--')
