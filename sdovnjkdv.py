@@ -8,7 +8,7 @@ def find_energy(n):
 
 
 def V(x):
-    return np.where((0 <= x) & (x <= 1), 0, np.inf)
+    return np.where((0 <= x) & (x <= 1), 0, 1e10)
 
 
 def schrodinger(r, x, V, E):
@@ -27,22 +27,20 @@ def solve_schrodinger(n):
     E = find_energy(n)
 
     solution = odeint(schrodinger, initial, x_vals, args=(V, E))
+    print(solution)
     psi_values = solution[:, 0]
 
     # More robust normalization
     prob_density = psi_values ** 2
+    print(prob_density)
     total_probability = np.trapezoid(prob_density, x_vals)
-
-    print(f"Quantum number n = {n}")
-    print(f"Total probability before normalization: {total_probability}")
-
-    # Normalize probability density to ensure it integrates to 1
+    print(total_probability)
     prob_density /= total_probability
 
     total_probability = np.trapezoid(prob_density, x_vals)
-    print(f"Total probability after normalization: {total_probability}")
 
-    return x_vals, np.sqrt(prob_density)
+
+    return x_vals, psi_values
 
 
 def plot_schrodinger_states(quantum_numbers):
