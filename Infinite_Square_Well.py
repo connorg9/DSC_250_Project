@@ -47,52 +47,47 @@ def solver(n):
 
     return x_vals, psi_vals, E
 
-def plot_schrodinger(n):
-    fig, ax = plt.subplots(len(n), 2, figsize=(12, 1.75 * len(n)))
+def plot_schrodinger(n_values):
+    fig, ax = plt.subplots(1, 2, figsize=(12, 8))
+    energy_limit = [] #used for graph y-lim later
 
-    for i, n in enumerate(n):
-
+    for n in n_values:
         x_vals, psi_vals, E = solver(n)
+        energy_limit.append(E)
 
         left_bound = x_vals <= 0
         middle = (x_vals > 0) & (x_vals < 1)
         right_bound = x_vals >= 1
 
-        ax[i, 0].plot(x_vals[left_bound], psi_vals[left_bound], color='r')
-        ax[i, 0].plot(x_vals[middle], psi_vals[middle], color='g')
-        ax[i, 0].plot(x_vals[right_bound], psi_vals[right_bound], color='r')
+        ax[0].plot(x_vals[left_bound], E + psi_vals[left_bound], color='r', alpha=0.5)
+        ax[0].plot(x_vals[middle], E + psi_vals[middle], label=f"n = {n}", linewidth=2)
+        ax[0].plot(x_vals[right_bound],E + psi_vals[right_bound], color='r', alpha=0.5)
 
-        ax[i, 0].set_ylim(-2, 2)
+        prob = psi_vals ** 2
+        ax[1].plot(x_vals[left_bound], E + prob[left_bound], color='r', alpha=0.5)
+        ax[1].plot(x_vals[middle], E + prob[middle], label=f"n = {n}", linewidth=2)
+        ax[1].plot(x_vals[right_bound], E + prob[right_bound], color='r', alpha=0.5)
 
-        ax[i, 0].set_title("Wavefunction of n = {0}".format(n))
-        ax[i, 0].axvline(0, color='k', linestyle='--')
-        ax[i, 0].axvline(1, color='k', linestyle='--')
-        ax[i, 0].fill_between(x_vals[left_bound], 2, alpha=0.3, color='gray')
-        ax[i, 0].fill_between(x_vals[left_bound], -2, alpha=0.3, color='gray')
-        ax[i, 0].fill_between(x_vals[right_bound], 2, alpha=0.3, color='gray')
-        ax[i, 0].fill_between(x_vals[right_bound], -2, alpha=0.3, color='gray')
-        ax[i, 0].set_xlabel("Position")
-        ax[i, 0].set_ylabel("Psi")
-        ax[i, 0].grid(True)
+    ax[0].set_title("Wavefunctions")
+    ax[0].set_xlabel("Position")
+    ax[0].set_ylabel(r"$\psi(x)$")
+    ax[0].set_ylim(0, max(energy_limit) + 0.2 * max(energy_limit))
+    ax[0].axvline(0, color='k', linestyle='--')
+    ax[0].axvline(1, color='k', linestyle='--')
+    ax[0].fill_between(x_vals, 0, max(energy_limit) + .2 * max(energy_limit), where=(x_vals <= 0) | (x_vals >= 1), color='gray', alpha=0.3)
+    ax[0].grid(True)
+    ax[0].legend()
 
-        ax[i, 1].plot(x_vals[left_bound], psi_vals[left_bound] ** 2, color='r')
-        ax[i, 1].plot(x_vals[middle], psi_vals[middle] ** 2, color='g')
-        ax[i, 1].plot(x_vals[right_bound], psi_vals[right_bound] ** 2, color='r')
-
-        ax[i, 1].set_ylim(-0.5, 2.5)
-
-        ax[i, 1].set_title("Probability of n = {0}".format(n))
-        ax[i, 1].axvline(0, color='k', linestyle='--')
-        ax[i, 1].axvline(1, color='k', linestyle='--')
-        ax[i, 1].fill_between(x_vals[left_bound], 2.5, alpha=0.3, color='gray')
-        ax[i, 1].fill_between(x_vals[left_bound], -0.5, alpha=0.3, color='gray')
-        ax[i, 1].fill_between(x_vals[right_bound], 2.5, alpha=0.3, color='gray')
-        ax[i, 1].fill_between(x_vals[right_bound], -0.5, alpha=0.3, color='gray')
-        ax[i, 1].set_xlabel("Position")
-        ax[i, 1].set_ylabel("Prob. Density")
-        ax[i, 1].grid(True)
+    ax[1].set_title("Probability Densities")
+    ax[1].set_xlabel("Position")
+    ax[1].set_ylabel("Probability Density")
+    ax[1].set_ylim(0, max(energy_limit) + 0.2 * max(energy_limit))
+    ax[1].axvline(0, color='k', linestyle='--')
+    ax[1].axvline(1, color='k', linestyle='--')
+    ax[1].fill_between(x_vals, 0, max(energy_limit) + .2 * max(energy_limit), where=(x_vals <= 0) | (x_vals >= 1), color='gray', alpha=0.3)
+    ax[1].grid(True)
 
     plt.tight_layout()
     plt.show()
 
-plot_schrodinger([1, 2, 3, 4, 5])
+plot_schrodinger([1, 2, 3, 4, 5]) #large numbers (8+) here graph, but stretches the vertical and it's less pleasant

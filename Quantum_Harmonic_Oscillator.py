@@ -16,12 +16,12 @@ def V(x):
 def schrodinger(r, x, V, E):
     hbar = 1
     m = 1
-    psi, phi = r
+    psi, dpsi = r
 
-    dpsi = phi
-    dphi = (2 * m / hbar**2) * (V(x) - E) * psi
+    #dpsi = dpsi
+    d2psi = (2 * m / hbar**2) * (V(x) - E) * psi
 
-    return [dpsi, dphi]
+    return [dpsi, d2psi]
 
 def solver(n):
     resolution = 500
@@ -34,7 +34,6 @@ def solver(n):
     E = find_energies(n)
 
     solution = odeint(schrodinger, initial, x_vals, args=(V, E))
-    print(solution)
     psi_vals = solution[:, 0]
 
     norm = np.trapezoid(psi_vals ** 2, x_vals)
@@ -59,7 +58,7 @@ def plot_schrodinger(n):
         ax[i, 0].plot(x_vals, psi_vals + E, label = "Wavefunction/Probability")
         ax[i, 0].set_title("Wavefunction of n = {0}".format(n))
         ax[i, 0].set_xlabel("Position")
-        ax[i, 0].set_ylabel("Psi")
+        ax[i, 0].set_ylabel("$\psi(x)$")
         ax[i, 0].fill_between(x_vals, bound_vals, color='gray', alpha=0.3)
         ax[i, 0].set_ylim(0, 6.5)
         ax[i, 0].grid(True)
@@ -76,8 +75,9 @@ def plot_schrodinger(n):
         ax[i, 1].grid(True)
 
     handles, labels = ax[1, 1].get_legend_handles_labels()  # Get labels from one subplot
-    fig.legend(handles, labels, bbox_to_anchor=(0.58, 0.71), fontsize='x-small')
+    fig.legend(handles, labels, bbox_to_anchor=(0.58, 0.57), fontsize='x-small')
     plt.tight_layout()
+    plt.savefig("schrodinger_{}.pdf".format(n))
     plt.show()
 
-plot_schrodinger([3, 4, 5])
+plot_schrodinger([1, 2])
