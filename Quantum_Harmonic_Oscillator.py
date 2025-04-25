@@ -43,41 +43,38 @@ def solver(n):
 
 def plot_schrodinger(n):
 
-    fig, ax = plt.subplots(len(n), 2, figsize=(12, 3 * len(n)))
-
+    fig, ax = plt.subplots(1, 2, figsize=(12, 8))
+    energy_limit = []
     for i, n in enumerate(n):
 
         x_vals, psi_vals, E = solver(n)
-
+        energy_limit.append(E)
         bound_vals = []
         for x in x_vals:
             bound_vals.append(0.5 * x ** 2)
 
-        ax[i, 0].plot(x_vals, bound_vals, linestyle='--', color='k', label = "Boundary")
-        ax[i, 0].plot(x_vals, [E] * len(x_vals), linestyle='--', color='m', alpha=0.5, label = "Energy Level")
-        ax[i, 0].plot(x_vals, psi_vals + E, label = "Wavefunction/Probability")
-        ax[i, 0].set_title("Wavefunction of n = {0}".format(n))
-        ax[i, 0].set_xlabel("Position")
-        ax[i, 0].set_ylabel("$\psi(x)$")
-        ax[i, 0].fill_between(x_vals, bound_vals, color='gray', alpha=0.3)
-        ax[i, 0].set_ylim(0, 6.5)
-        ax[i, 0].grid(True)
+        ax[0].plot(x_vals, bound_vals, linestyle='--', color='k', label = "Boundary")
+        ax[0].plot(x_vals, [E] * len(x_vals), linestyle='--', color='m', alpha=0.5, label = "Energy Level")
+        ax[0].plot(x_vals, psi_vals + E, label = "Wavefunction/Probability")
+        ax[0].set_title("Wavefunction of n = {0}".format(n))
+        ax[0].set_xlabel("Position")
+        ax[0].set_ylabel("$\psi(x)$")
+        ax[0].fill_between(x_vals, bound_vals, color='gray', alpha=0.3)
+        ax[0].set_ylim(0, max(energy_limit) + 0.25 * max(bound_vals))
+        ax[0].grid(True)
 
-        ax[i, 1].plot(x_vals, bound_vals, linestyle='--', color='k', label = "Boundary")
-        ax[i, 1].plot(x_vals, [E] * len(x_vals), linestyle='--', color='m', alpha=0.5, label = "Energy Level")
-        ax[i, 1].plot(x_vals, E + (psi_vals ** 2), label = "Wavefunction/Probability")
-        ax[i, 1].set_title("Probability of n = {0}".format(n))
-        ax[i, 1].set_xlabel("Position")
-        ax[i, 1].set_ylabel("Prob. Density")
-        ax[i, 1].fill_between(x_vals, bound_vals, color='gray', alpha=0.3)
-        ax[i, 1].fill_between(x_vals, [E] * len(x_vals), E + (psi_vals ** 2), color = "green", alpha = 0.3, label = "Allowed area")
-        ax[i, 1].set_ylim(0, 6.5)
-        ax[i, 1].grid(True)
+        ax[1].plot(x_vals, bound_vals, linestyle='--', color='k', label="Boundary")
+        ax[1].plot(x_vals, [E]*len(x_vals), linestyle='--', color='m', alpha=0.5, label="EnergyLevel")
+        ax[1].plot(x_vals, E + (psi_vals**2), label="Wavefunction/Probability")
+        ax[1].set_title("Probability of n={0}".format(n))
+        ax[1].set_xlabel("Position")
+        ax[1].set_ylabel("Prob. Density")
+        ax[1].fill_between(x_vals,bound_vals, color='gray', alpha=0.3)
+        ax[1].fill_between(x_vals, [E] * len(x_vals), E + (psi_vals**2), color="green", alpha=0.3, label="Allowed area")
+        ax[1].set_ylim(0, max(energy_limit) + 0.25 * max(bound_vals))
+        ax[1].grid(True)
 
-    handles, labels = ax[1, 1].get_legend_handles_labels()  # Get labels from one subplot
-    fig.legend(handles, labels, bbox_to_anchor=(0.58, 0.57), fontsize='x-small')
     plt.tight_layout()
-    plt.savefig("schrodinger_{}.pdf".format(n))
     plt.show()
 
-plot_schrodinger([1, 2])
+plot_schrodinger([1, 2, 3, 4, 5, 6])
