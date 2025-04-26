@@ -1,147 +1,123 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import odeint
 from scipy.optimize import root_scalar
 
-# Constants
-hbar = 1.0
-m = 1.0
-def find_energy_levels(a, V0):
-    energies = []
+def V(x, V0, a, w):
+    if -a/2 < x < a/2 or x > a/2 + w:
+        return 0 #inside well
+    elif x < -a/2:
+        return V0
+    elif a/2 < x < a/2 + w:
+        return 0 #outside well
 
-    # Loop through possible values to find roots
-    for n in range(1, 20):  # Try to find enough states
-        # First guess for energy (based on infinite well)
-        E_guess = (n ** 2 * np.pi ** 2 * hbar ** 2) / (2 * m * a ** 2)
-        if E_guess >= V0:
-            continue  # Basically, there are no bound states for a well with these dimensions
+def fk(E, V0, a, n):
+    if E <= 0 or E >= V0:
+        return 1e6  # Arbitrary large error b/c otherwise get error
+    k1 = np.sqrt(2 * E)
+    k2 = np.sqrt(2 * (V0 - E))
+    if n % 2:  # Odd n = even parity
+        return k2 - k1 * np.tan(k1 * a / 2)
+    else:  # Even n = odd parity
+        return k2 + k1 / np.tan(k1 * a / 2)
 
-        if n % 2 == 1:  # odd n means even wavefunction (cos)
-            # Even function: equation is k*tan(k*a/2) = kappa
-            parity = "even"
-            def f(E):
-                if E >= V0 or E <= 0: #exclude non-bound states or negative energy (not possible)
-                    return np.inf
-                k = np.sqrt(2 * m * E) / hbar
-                kappa = np.sqrt(2 * m * (V0 - E)) / hbar
-                return (k * np.tan(k * a / 2)) - kappa
+def find_energy(V0, a):
+    n = 500
+    Ei = np.linspace(0.0, V0, n)
+    roots = []
+    for n in [1, 2]:  # Check both even and odd parity solutions - used in fk function
+        for i in range(len(Ei - 1)):
+            try:
+                solution = root_scalar(fk, args=(V0, a, n), x0=Ei[i - 1], x1=Ei[i])
+                if solution.converged and np.around(solution.root, 9) not in roots:
+                    roots.append(np.around(solution.root, 9))
+            except ValueError: # try/except loop to make sure things don't go wrong
+                continue
 
+    return np.sort(roots)
 
-        else: #sin function
-            parity = "odd"
-            # Odd function: equation is -k*cot(k*a/2) = kappa
-            def f(E):
-                if E >= V0 or E <= 0: #exclude non-physical energies again
-                    return np.inf
-                k = np.sqrt(2 * m * E) / hbar
-                kappa = np.sqrt(2 * m * (V0 - E)) / hbar
-                return (-k / np.tan(k * a / 2)) - kappa
-        try:
-            # Try to bracket solution
-            E_low = 0.01
-            E_high = min(V0, (n ** 2 * np.pi ** 2 * hbar ** 2) / (2 * m * a ** 2)) * 0.99
-            #because we are still in "n" loop, this is segmenting the functions to find each solution instead of all of them at once
+def schrodinger(r, x, V, E):
+    hbar = 1
+    m = 1
+    psi, phi = r
 
-            # Check if solution exists in this bracket
-            y_low, y_high = f(E_low), f(E_high)
-            if np.sign(y_low) == np.sign(y_high):
-                continue  # No root in this interval since signs are same (IVT)
+    dpsi = phi
+    dphi = (2 * m / hbar ** 2) * (V(x) - E) * psi
 
-            # Find root (intersections)
-            else:
-                E = root_scalar(f, bracket=[E_low, E_high]).root
-                energies.append((E, parity, n))
+    return [dpsi, dphi]
 
-        except:
-            continue
-        #I don't want to have to worry about the cases where there are no intersections (which will throw an error)
-        #so I put a try/except block to just keep going past those scenarios
-    return energies
+def solver(E, V0, a, w):
 
+    resolution = 500
+    x_min = -2
+    x_max = 5
+    x_vals = np.linspace(x_min, x_max, resolution)
 
-def wavefunction(x, n, a, V0):
-    energies = find_energy_levels(a, V0) #find energies first, that way if more states requested than actually exist, stop the calculations
-    if n > len(energies):
-        raise ValueError("Only {0} energy levels found, requested n={1}".format(len(energies), n))
+    initial = [0.001, 0.001]
 
-    E, parity, n = energies[n - 1]  # n is 1-indexed
+    solution = odeint(schrodinger, initial, x_vals, args=(lambda x: V(x, V0, a, w), E)) #need lambda in args since V iterates on x - using x_vals results in "ambiguous truth value"
+    psi_vals = solution[:, 0]
 
-    k = np.sqrt(2 * m * E) / hbar  # wavenumber inside well
-    kappa = np.sqrt(2 * m * (V0 - E)) / hbar  # decay constant outside well
+    well_region = np.abs(x_vals) <= a / 2 + 1
+    norm = np.trapezoid(psi_vals[well_region] ** 2, x_vals[well_region]) #similar to ISW, but need to include some area outside well area to account for decay
+    psi_vals /= np.sqrt(norm)
 
-    psi = np.zeros_like(x) # Function to evaluate wavefunction at each point, start with 0s
+    return x_vals, psi_vals, E
 
-    if parity == "even":
-        # Even function: psi(x) = A*cos(k*x) inside, B*exp(-kappa*|x|) outside
-        A = 1.0  # will normalize later
+def plot_schrodinger(n_values, V0, a, w):
 
-        mask_inside = np.abs(x) <= a / 2
-        psi[mask_inside] = A * np.cos(k * x[mask_inside])
+    eigenvalues = find_energy(V0, a) #valid eigenvalues for well with given size
 
-        # Outside well - match value at boundary to make function continuous
-        B = A * np.cos(k * a / 2)
-        mask_outside = np.abs(x) > a / 2
-        psi[mask_outside] = B * np.exp(-kappa * (np.abs(x[mask_outside]) - a / 2))
-
-    else:
-        # Odd function: psi(x) = A*sin(k*x) inside, B*sgn(x)*exp(-kappa*|x|) outside
-        #do same steps as even just with different equations
-        A = 1.0
-
-        mask_inside = np.abs(x) <= a / 2
-        psi[mask_inside] = A * np.sin(k * x[mask_inside])
-
-        B = A * np.sin(k * a / 2)
-        mask_outside = np.abs(x) > a / 2
-        psi[mask_outside] = B * np.sign(x[mask_outside]) * np.exp(-kappa * (np.abs(x[mask_outside]) - a / 2))
-
-    # Normalize
-    norm = np.sqrt(np.trapezoid(psi**2, x))
-    psi /= norm
-
-    return psi, E
-
-def plot_solutions(n_values, a, V0):
-    x_min = -a - a/2
-    x_max = a + a/2
-    x = np.linspace(x_min, x_max, 1000)
-
-    potential = np.where(np.abs(x) <= a / 2, 0, V0)
-
-    fig, axs = plt.subplots(len(n_values), 2, figsize=(12, 4 * len(n_values)))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 8))
+    energy_limit = []  # Used for graph y-lim later
 
     for i, n in enumerate(n_values):
-        psi, E = wavefunction(x, n, a, V0)
-        prob = psi ** 2
+        if i < len(eigenvalues):
+            E = eigenvalues[i]
+            energy_limit.append(E) #need max evergy to make sure everything is graphed (setting y-lim)
 
-        if len(n_values) == 1:
-            ax1 = axs[0]
-            ax2 = axs[1]
+            x_vals, psi_vals, energy = solver(E, V0, a, w)
+
+            ax[0].plot(x_vals, energy + psi_vals, label="n = {0}".format(n))
+            ax[0].axhline(E, linestyle='--', color=f'C{i}')
+
+            prob = psi_vals ** 2
+            ax[1].plot(x_vals, energy + prob, label="n = {0}".format(n))
+            ax[1].fill_between(x_vals, energy, energy + prob, color="green", alpha=0.3)
+            ax[1].axhline(E, linestyle='--', color=f'C{i}')
+
         else:
-            ax1 = axs[i, 0]
-            ax2 = axs[i, 1]
+            print("Too many states requested, given inputs only has {0} state(s)".format(len(energy_limit)))
+            break
 
-        ax1.plot(x, E + psi, 'b-', label=r'$\psi(x)$')
-        ax1.plot(x, [E] * len(x), linestyle='--', color = "m")
-        ax1.plot(x, potential, 'k--', alpha=0.5, label='V(x)')
+    x_left = np.linspace(min(x_vals), -a / 2, 100)
+    x_right = np.linspace(a / 2, a/2 + w, 100)
 
-        ax1.set_title(f'Wavefunction of n = {n}')
-        ax1.set_xlabel('Position')
-        ax1.set_ylabel('$\psi(x)$')
-        ax1.grid(True)
-        ax1.legend()
+    ax[0].set_title("Wavefunctions")
+    ax[0].set_xlabel("Position")
+    ax[0].set_ylabel(r"$\psi(x)$ + Energy")
+    ax[0].set_ylim(0, max(energy_limit) + 0.25 * max(energy_limit))
+    ax[0].fill_between(x_left, 0, V0, color='gray', alpha=0.3)
+    ax[0].fill_between(x_right, 0, V0, color='gray', alpha=0.3)
 
-        ax2.plot(x, E + prob, 'b-', label=r'$|\psi(x)|^2$')
-        ax2.plot(x, [E] * len(x), linestyle='--', color = "m")
-        ax2.fill_between(x, [E] * len(x), E + prob, alpha=0.3, color="green")
-        ax2.plot(x, potential, 'k--', alpha=0.5, label='V(x)')
+    ax[0].grid(True)
+    ax[0].legend()
 
-        ax2.set_title(f'Probability Density of n = {n}')
-        ax2.set_xlabel('Position')
-        ax2.set_ylabel('$\psi(x)^2$')
-        ax2.grid(True)
-        ax2.legend()
+    ax[1].set_title("Probability Densities")
+    ax[1].set_xlabel("Position")
+    ax[1].set_ylabel("Probability Density + Energy")
+    ax[1].set_ylim(0, max(energy_limit) + 0.25 * max(energy_limit))
+    ax[1].fill_between(x_left, 0, V0, color='gray', alpha=0.3)
+    ax[1].fill_between(x_right, 0, V0, color='gray', alpha=0.3)
+    ax[1].grid(True)
 
     plt.tight_layout()
     plt.show()
 
-plot_solutions([1, 2], 2, 10)
+V0 = 50
+a = 1
+plot_schrodinger([1, 2, 3, 4], V0, a, .25) #making w skinnier lets all states escape, not just high energies
+
+#double square well, double harmonic, morse potential,
+
+
